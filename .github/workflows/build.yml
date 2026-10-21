@@ -19,12 +19,65 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.7'
-        
-    - name: Fix Root Gradle File
+
+    - name: Fix Gradle Files Automatically
       run: |
-        echo "buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.tools.build:gradle:8.1.0' } }" > build.gradle
-        echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
-        echo "include ':app'" > settings.gradle
+        # 1. Create root build.gradle
+        cat << 'EOF' > build.gradle
+        plugins {
+            id 'com.android.application' version '8.1.0' apply false
+        }
+        EOF
+        
+        # 2. Create settings.gradle
+        cat << 'EOF' > settings.gradle
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        rootProject.name = "FFpanel"
+        include ':app'
+        EOF
+        
+        # 3. Create app/build.gradle
+        cat << 'EOF' > app/build.gradle
+        plugins {
+            id 'com.android.application'
+        }
+        android {
+            namespace 'com.ff.panel'
+            compileSdk 33
+            defaultConfig {
+                applicationId "com.ff.panel"
+                minSdk 21
+                targetSdk 33
+                versionCode 1
+                versionName "1.0"
+            }
+            buildTypes {
+                release {
+                    minifyEnabled false
+                }
+            }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+        }
+        EOF
         
     - name: Build APK
       run: gradle assembleDebug --no-daemon
@@ -34,3 +87,4 @@ jobs:
       with:
         name: FFpanel-APK
         path: app/build/outputs/apk/debug/*.apk
+      
